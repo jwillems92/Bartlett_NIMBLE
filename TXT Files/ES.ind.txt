@@ -1,0 +1,27 @@
+# JAGS code for environmental stochasticity models
+# Independent environmental stochasticity between sites
+# Negative binomial initial abundance, Ricker-logistic dynamics + immigration
+model {
+
+lambda ~ dunif(0, 400)
+alpha ~ dunif(0, 400)
+P <- alpha/(alpha + lambda)
+K ~ dunif(0, 400)
+r ~ dunif(0, 5)
+iota ~ dunif(0, 10)
+sigma.nu ~ dunif(0, 2)
+tau.nu <- 1 / (sigma.nu * sigma.nu)
+p ~ dunif(0, 1)
+
+for(i in 1:nSites) {
+  N[i,1] ~ dnegbin(P, alpha)
+  for(t in 2:nYears) {
+      nu[i,t-1] ~ dnorm(0, tau.nu)
+      muN[i,t-1] <- N[i, t-1] * exp(nu[i, t-1] + r * (1 - log(N[i, t-1] + 1) / log(K + 1))) + iota
+      N[i,t] ~ dpois(muN[i, t-1])
+  }
+  for(t in 1:nYears) {
+    y[i,t] ~ dbin(p, N[i,t])
+  }
+}
+}

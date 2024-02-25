@@ -1,0 +1,67 @@
+model.ricker.patch.nb <- nimbleCode({
+  # abundance at year 1 is only function of forest, area and sun exposure, assuming a negative binomial error distribution
+  for (i in 1:nSite){
+
+    N[i,1] ~ dnegbin(p.nb[i], alpha) 
+    p.nb[i] <- alpha/(alpha+lambda[i])
+    lambda[i] <- exp(b0)
+    
+    ## abundance at following years follows a Ricker model and is also function of crayfish at pond
+    ## the model has two components: the first component indicates that a density-dependent effect occurs if previous populaton size is >0 (standard Ricker model)
+    
+    for (t in 2:nYear){        
+      N[i,t] ~ dpois(L[i,t])
+      L[i,t] <- nimStep(N[i,t-1]-0.01) * exp(log(N[i,t-1]) + rho - eta*N[i,t-1] + S[i] + T[t])
+      +
+        ## some populations have size = 0 in some years. Therefore, we added a second component, 
+        # where the density dependent effect does not occur if in a given year the previous populaton size is = 0. This term was added because, if population size is = 0, growth rate cannot be negative  
+        (1 - nimStep(N[i,t-1]-0.01)) * exp(rho + S[i] + T[t])
+    }
+    
+    for(j in 1:nRep){
+      for (t in 1:nYear){
+        y[i,j,t] ~ dbin(p[i,j,t],N[i,t])  # following Hostetler and Chandler 2015, wealso  included the observation process in the model; Y[i,t] is the number of clutches observed at pond i in year t, and p is the detection probability. 
+        
+        p[i,j,t] <- exp(lp[i,j,t])/(1+exp(lp[i,j,t]))
+        
+        lp[i,j,t] <- a0 + a_day * day[i,j,t] + a_hour * hour[i,j,t]
+      }
+    }
+  }
+  
+  # Priors
+  for (i in 1:nSite){
+    S[i] ~ dnorm(0,tau.S)    ## for the random effects, we used a non-informative prior:  normal distribution with mean = 0 and precision = tau
+  }
+  for (t in 2:nYear){
+    T[t] ~ dnorm(0,tau.T)   
+  }
+  
+  tau.S <- pow(sigma.S,-2)    ## tau showed a power law with base sigma and exponent -2
+  sigma.S ~ dt(0,1,1);T(0,)   ## the distribution of sigmaS was taken from a Cauchy prior with mean = 0, tau. The prior was trunked to avoid values <0
+  
+  tau.T <- pow(sigma.T,-2)
+  sigma.T ~ dt(0,1,1);T(0,)
+  
+  b0 ~ dnorm(0,0.01)         ## for all the parameters we used a non-informative prior: normal distribution with mean = 0 and precision = 0.01 (i.e. variance = 100)
+  a0 ~ dnorm(0,0.01)
+  a_day ~ dnorm(0,0.01)
+  a_hour ~ dnorm(0,0.01)
+
+  eta ~ dnorm(0,0.01)
+  rho ~ dnorm(0,0.01)
+  alpha~dunif(0,50)
+  
+  # Derived parameters
+  for (t in 2:nYear){
+    for (i in 1:nSite){
+      rho.tot[i,t] <- rho + S[i] + T[t]}
+    rho.t[t] <- mean(rho.tot[,t])
+  }
+  
+  for(t in 1:nYear){
+    N.t[t] <- mean(N[,t])
+  }
+  
+}
+)

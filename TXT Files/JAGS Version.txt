@@ -1,0 +1,104 @@
+
+model {
+
+## PRIORS
+
+for(i in 1:Nspp){
+
+    abund.init[i] ~ dnorm(0,0.01)
+    sigma.init[i] ~ dnorm(0,0.01)
+    b.int[i]      ~ dnorm(0,0.01)
+    
+    phi.mean[i]  ~ dnorm(0,0.01)
+    phi.alpha[i] ~ dnorm(0,0.01)
+    phi.int[i]   ~ dnorm(0,0.01)
+    
+    kappa[i] ~ dnorm(0,0.01)
+    
+    det.p.mean[i] ~ dnorm(0,0.01) 
+    sigma.det[i]  ~ dnorm(0,0.01)
+    p.int[i]      ~ dnorm(0,0.01) 
+
+    for(s in 1:Nsites){
+
+      eta.init[i,s] ~ dnorm(0, sigma.init[i])
+      
+      for(t in 1:Nyears){
+        
+        eta.abund[i,s,t] ~ dnorm(0,0.01) 
+        
+        for(l in 1:Nocc){
+          
+          eta.obs[i,s,t,l] ~ dnorm(0, sigma.det[i])
+          
+        } # end l
+      } # end t
+    } # end s
+} # end i
+
+
+## SPECIES INTERACTIONS ##
+for(i in 1:Nspp){
+  for(j in 1:Nspp){
+    
+        phi.beta[i,j] ~ dnorm(0,0.01)
+    
+  } # end j
+} # end i
+
+### PROCESS MODEL ###
+  
+  ## POPULATION GROWTH RATE ##
+  
+  for(i in 1:Nspp){
+    for(s in 1:Nsites){
+      for(t in 2:Nyears){
+        
+        log(phi[i,s,t]) <- phi.mean[i] + 
+                           (phi.alpha[i] * N[i,s,t-1]) + 
+                           inprod(phi.beta[i,1:Nspp], N[1:Nspp,s,t-1]) +   # not confident on this...
+                           phi.int[i]
+        
+      } # end t
+    } # end s
+  } # end i
+  
+  
+  ## MOVEMENT RATE BETWEEN SITES ##
+  
+  for(i in 1:Nspp){
+    for(s in 1:Nsites){
+      
+      eta[i,s,1:Nsites] <- exp(-1 * kappa[i] * dist[s, 1:Nsites])
+      theta[i,s,1:Nsites] <- eta[i,s,1:Nsites]/sum(eta[i,s,1:Nsites])
+      
+    } # end s
+  } # end i
+
+  ## ABUNDANCE ##
+  
+  for(i in 1:Nspp){
+    for(s in 1:Nsites){
+      # Initial Abundance in Year 1
+      N[i,s,1] ~ dpois(lambda[i,s,1])
+      
+      log(lambda[i,s,1]) <- abund.init[i] + b.int[i] + eta.init[i,s]
+        
+      for(t in 2:Nyears){
+        # Abundance in Subsequent Years  
+        N[i,s,t] ~ dpois(lambda[i,s,t])
+        
+        log(lambda[i,s,t]) <- log(N[i,s,t-1] * phi[i,s,t] * theta[i,s,t]) + eta.abund[i,s,t]
+          
+        for(l in 1:Nocc){
+          # Observation Process  
+          y[i,s,t,l] ~ dbinom(N[i,s,t], det.p[i,s,t,l])
+          
+          logit(det.p[i,s,t,l]) <- det.p.mean[i] + p.int[i] + eta.obs[i,s,t,l]
+            
+        } # end l
+      } # end t
+    } # end s
+  } # end i
+
+} # END MODEL

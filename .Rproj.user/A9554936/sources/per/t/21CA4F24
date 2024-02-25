@@ -1,0 +1,26 @@
+{
+    "id": "21CA4F24",
+    "path": "~/Documents/PhD Stuff/R Coding/Misc Projects/NIMBLE/Scripts/BEF Nimble Test.R",
+    "project_path": "Scripts/BEF Nimble Test.R",
+    "type": "r_source",
+    "hash": "1584574296",
+    "contents": "",
+    "dirty": false,
+    "created": 1708631763303.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "591,0",
+        "scrollLine": "550"
+    },
+    "folds": "50|24|101|0|\n104|26|295|0|\n298|26|489|0|\n",
+    "lastKnownWriteTime": 1708715506,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1708715506124,
+    "read_only": false,
+    "read_only_alternatives": []
+}
